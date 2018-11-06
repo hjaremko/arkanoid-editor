@@ -7,6 +7,8 @@ import (
     "strconv"
 )
 
+// Block
+
 type Block struct {
     TermBlock *ui.Block
     Color     ui.Attribute
@@ -14,40 +16,63 @@ type Block struct {
     Focused   bool
 }
 
-func (block *Block) SetPosition(x, y int) {
-    block.TermBlock.X = x
-    block.TermBlock.Y = y
+func (b *Block) SetPosition(x, y int) {
+    b.TermBlock.X = x
+    b.TermBlock.Y = y
 }
 
-func (block *Block) Render() {
-    if block.Focused {
-        block.TermBlock.BorderFg = ui.AttrReverse | block.Color
+func (b *Block) Render() {
+    if b.Focused {
+        b.TermBlock.BorderFg = ui.AttrReverse | b.Color
     } else {
-        block.TermBlock.BorderFg = block.Color
+        b.TermBlock.BorderFg = b.Color
     }
 
-    ui.Render(block.TermBlock)
+    ui.Render(b.TermBlock)
 }
 
-func (block *Block) Dump() string {
-    output := strconv.Itoa(block.TermBlock.Y) + " "
-    output += strconv.Itoa(block.TermBlock.X) + " "
-    output += strconv.Itoa(block.TermBlock.Width) + " "
-    output += strconv.Itoa(block.TermBlock.Height) + " "
-    output += strconv.Itoa(int(block.Color) - 1)
+func (b *Block) Dump() string {
+    output := strconv.Itoa(b.TermBlock.Y) + " "
+    output += strconv.Itoa(b.TermBlock.X) + " "
+    output += strconv.Itoa(b.TermBlock.Width) + " "
+    output += strconv.Itoa(b.TermBlock.Height) + " "
+    output += strconv.Itoa(int(b.Color) - 1)
     output += " 1\n"
 
     return output
+}
+
+func (b *Block) Intersects(x int, y int) bool {
+    return (y >= b.TermBlock.Y && y < (b.TermBlock.Y+b.TermBlock.Height) && x >= b.TermBlock.X && x < (b.TermBlock.X+b.TermBlock.Width))
+}
+
+func (b *Block) IntersectsBlock(other Block) bool {
+    aX1 := b.TermBlock.X
+    aX2 := b.TermBlock.X + b.TermBlock.Width
+    aY1 := b.TermBlock.Y
+    aY2 := b.TermBlock.Y + b.TermBlock.Height
+
+    bX1 := other.TermBlock.X
+    bX2 := other.TermBlock.X + other.TermBlock.Width
+    bY1 := other.TermBlock.Y
+    bY2 := other.TermBlock.Y + other.TermBlock.Height
+
+    xOverlap := ValueInRange(aX1, bX1, bX2) || ValueInRange(bX1, aX1, aX2)
+    yOverlap := ValueInRange(aY1, bY1, bY2) || ValueInRange(bY1, aY1, aY2)
+
+    return xOverlap && yOverlap
+}
+
+//~Block
+
+func ValueInRange(value, min, max int) bool {
+    return ((value >= min) && (value < max))
 }
 
 func renderBlocks(blocks []Block) {
     for _, block := range blocks {
         block.Render()
     }
-}
-
-func (block *Block) Intersects(x int, y int) bool {
-    return (y >= block.TermBlock.Y && y < (block.TermBlock.Y+block.TermBlock.Height) && x >= block.TermBlock.X && x < (block.TermBlock.X+block.TermBlock.Width))
 }
 
 func dump(blocks []Block) {
@@ -65,45 +90,49 @@ func dump(blocks []Block) {
     }
 }
 
-type ColorBlock struct {
+//Button
+
+type Button struct {
     Block  *ui.Par
     Color  ui.Attribute
     Active bool
 }
 
-func (block *ColorBlock) Render() {
-    if block.Active {
-        block.Block.BorderFg = block.Color
+func (b *Button) Toggle() {
+    b.Active = !b.Active
+}
+
+func (b *Button) Render() {
+    if b.Active {
+        b.Block.BorderFg = b.Color
     } else {
-        block.Block.BorderFg = ui.ColorWhite
+        b.Block.BorderFg = ui.ColorWhite
     }
 
-    ui.Render(block.Block)
+    ui.Render(b.Block)
 }
 
-func (block *ColorBlock) Toggle() {
-    block.Active = !block.Active
-}
-
-func (block *ColorBlock) Init(x, y, height, width int, color ui.Attribute, colorName string) {
-    if block.Block == nil {
-        block.Block = ui.NewPar(colorName)
-        block.Block.X = x
-        block.Block.Y = y
-        block.Block.Height = height
-        block.Block.Width = width
-        block.Block.BorderFg = color
-        block.Color = color
+func (b *Button) Init(x, y, height, width int, color ui.Attribute, colorName string) {
+    if b.Block == nil {
+        b.Block = ui.NewPar(colorName)
+        b.Block.X = x
+        b.Block.Y = y
+        b.Block.Height = height
+        b.Block.Width = width
+        b.Block.BorderFg = color
+        b.Color = color
     }
 }
 
-func renderColorButtons(blocks []ColorBlock) {
+//~ColorButton
+
+func renderButtons(blocks []Button) {
     for _, block := range blocks {
         block.Render()
     }
 }
 
-func activateColorButton(buttons []ColorBlock, index int) {
+func activateButton(buttons []Button, index int) {
     for i, _ := range buttons {
         if i == index {
             buttons[i].Active = true
@@ -111,6 +140,26 @@ func activateColorButton(buttons []ColorBlock, index int) {
             buttons[i].Active = false
         }
     }
+}
+
+func FindIntersecting(blocks []Block, mouseX, mouseY int) (index int, found bool) {
+    for i, block := range blocks {
+        if block.Intersects(mouseX, mouseY) {
+            return i, true
+        }
+    }
+
+    return -1, false
+}
+
+func FindIntersectingBlock(blocks []Block, newBlock Block) (index int, found bool) {
+    for i, block := range blocks {
+        if block.IntersectsBlock(newBlock) {
+            return i, true
+        }
+    }
+
+    return -1, false
 }
 
 func main() {
@@ -145,7 +194,7 @@ func main() {
     controls.BorderLabelFg = ui.ColorWhite
 
     blocks := make([]Block, 0, 100)
-    colorButtons := make([]ColorBlock, 7, 7)
+    colorButtons := make([]Button, 7, 7)
 
     colorButtons[0].Init(ui.TermWidth()-22, 18, 3, 15, ui.ColorRed, " Red ")
     colorButtons[1].Init(ui.TermWidth()-22, 21, 3, 15, ui.ColorGreen, " Green ")
@@ -171,13 +220,14 @@ func main() {
     ui.Body.Align()
 
     ui.Render(ui.Body, newBlockButton, moveButton)
-    renderColorButtons(colorButtons)
+    renderButtons(colorButtons)
 
     ui.Handle("<MouseLeft>", func(e ui.Event) {
         mouseX := e.Payload.(ui.Mouse).X
         mouseY := e.Payload.(ui.Mouse).Y
 
         if newMode {
+
             newBlock := ui.NewBlock()
             newBlock.Height = 3
             newBlock.Width = 6
@@ -191,35 +241,32 @@ func main() {
                 false,
             }
 
-            blocks = append(blocks, newBBlock)
+            _, found := FindIntersectingBlock(blocks, newBBlock)
 
-        } else if moveMode {
-            found := false
-
-            for i, block := range blocks {
-                if block.Intersects(mouseX, mouseY) {
-
-                    if selectedBlock != nil {
-                        selectedBlock.Focused = false
-                    }
-
-                    blocks[i].Focused = true
-                    selectedBlock = &blocks[i]
-                    selectedIndex = i
-
-                    found = true
-                    break
-                }
+            if !found {
+                blocks = append(blocks, newBBlock)
             }
 
-            if selectedBlock != nil && !found {
+        } else if moveMode {
+            foundIndex, found := FindIntersecting(blocks, mouseX, mouseY)
+
+            if found {
+                if selectedBlock != nil {
+                    selectedBlock.Focused = false
+                }
+
+                blocks[foundIndex].Focused = true
+                selectedBlock = &blocks[foundIndex]
+                selectedIndex = foundIndex
+
+            } else if selectedBlock != nil {
                 selectedBlock.SetPosition(mouseX, mouseY)
             }
         }
 
         ui.Clear()
         ui.Render(ui.Body, newBlockButton, moveButton)
-        renderColorButtons(colorButtons)
+        renderButtons(colorButtons)
         renderBlocks(blocks)
 
     })
@@ -248,7 +295,7 @@ func main() {
 
         ui.Clear()
         ui.Render(ui.Body, newBlockButton, moveButton)
-        renderColorButtons(colorButtons)
+        renderButtons(colorButtons)
         renderBlocks(blocks)
 
     })
@@ -262,14 +309,14 @@ func main() {
 
         ui.Clear()
         ui.Render(ui.Body, newBlockButton, moveButton)
-        renderColorButtons(colorButtons)
+        renderButtons(colorButtons)
         renderBlocks(blocks)
 
     })
 
     ui.Handle("1", func(ui.Event) {
         selectedColor = ui.ColorRed
-        activateColorButton(colorButtons, 0)
+        activateButton(colorButtons, 0)
 
         if selectedBlock != nil {
             selectedBlock.Color = colorButtons[0].Color
@@ -277,14 +324,14 @@ func main() {
 
         ui.Clear()
         ui.Render(ui.Body, newBlockButton, moveButton)
-        renderColorButtons(colorButtons)
+        renderButtons(colorButtons)
         renderBlocks(blocks)
 
     })
 
     ui.Handle("2", func(ui.Event) {
         selectedColor = ui.ColorGreen
-        activateColorButton(colorButtons, 1)
+        activateButton(colorButtons, 1)
 
         if selectedBlock != nil {
             selectedBlock.Color = colorButtons[1].Color
@@ -292,14 +339,14 @@ func main() {
 
         ui.Clear()
         ui.Render(ui.Body, newBlockButton, moveButton)
-        renderColorButtons(colorButtons)
+        renderButtons(colorButtons)
         renderBlocks(blocks)
 
     })
 
     ui.Handle("3", func(ui.Event) {
         selectedColor = colorButtons[2].Color
-        activateColorButton(colorButtons, 2)
+        activateButton(colorButtons, 2)
 
         if selectedBlock != nil {
             selectedBlock.Color = colorButtons[2].Color
@@ -307,14 +354,14 @@ func main() {
 
         ui.Clear()
         ui.Render(ui.Body, newBlockButton, moveButton)
-        renderColorButtons(colorButtons)
+        renderButtons(colorButtons)
         renderBlocks(blocks)
 
     })
 
     ui.Handle("4", func(ui.Event) {
         selectedColor = colorButtons[3].Color
-        activateColorButton(colorButtons, 3)
+        activateButton(colorButtons, 3)
 
         if selectedBlock != nil {
             selectedBlock.Color = colorButtons[3].Color
@@ -322,14 +369,14 @@ func main() {
 
         ui.Clear()
         ui.Render(ui.Body, newBlockButton, moveButton)
-        renderColorButtons(colorButtons)
+        renderButtons(colorButtons)
         renderBlocks(blocks)
 
     })
 
     ui.Handle("5", func(ui.Event) {
         selectedColor = colorButtons[4].Color
-        activateColorButton(colorButtons, 4)
+        activateButton(colorButtons, 4)
 
         if selectedBlock != nil {
             selectedBlock.Color = colorButtons[4].Color
@@ -337,14 +384,14 @@ func main() {
 
         ui.Clear()
         ui.Render(ui.Body, newBlockButton, moveButton)
-        renderColorButtons(colorButtons)
+        renderButtons(colorButtons)
         renderBlocks(blocks)
 
     })
 
     ui.Handle("6", func(ui.Event) {
         selectedColor = colorButtons[5].Color
-        activateColorButton(colorButtons, 5)
+        activateButton(colorButtons, 5)
 
         if selectedBlock != nil {
             selectedBlock.Color = colorButtons[5].Color
@@ -352,14 +399,14 @@ func main() {
 
         ui.Clear()
         ui.Render(ui.Body, newBlockButton, moveButton)
-        renderColorButtons(colorButtons)
+        renderButtons(colorButtons)
         renderBlocks(blocks)
 
     })
 
     ui.Handle("7", func(ui.Event) {
         selectedColor = colorButtons[6].Color
-        activateColorButton(colorButtons, 6)
+        activateButton(colorButtons, 6)
 
         if selectedBlock != nil {
             selectedBlock.Color = colorButtons[6].Color
@@ -367,7 +414,7 @@ func main() {
 
         ui.Clear()
         ui.Render(ui.Body, newBlockButton, moveButton)
-        renderColorButtons(colorButtons)
+        renderButtons(colorButtons)
         renderBlocks(blocks)
 
     })
