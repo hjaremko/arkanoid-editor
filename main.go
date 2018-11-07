@@ -133,7 +133,7 @@ func RenderButtons(blocks []Button) {
 }
 
 func ActivateButton(buttons []Button, index int) {
-    for i, _ := range buttons {
+    for i := 0; i < 7; i++ {
         if i == index {
             buttons[i].Active = true
         } else {
@@ -169,20 +169,6 @@ func main() {
 
     defer ui.Close()
 
-    newBlockButton := ui.NewPar(" New Block ")
-    newBlockButton.Height = 3
-    newBlockButton.Width = 15
-    newBlockButton.X = ui.TermWidth() - 22
-    newBlockButton.Y = 10
-    newBlockButton.BorderFg = ui.ColorRed
-
-    moveButton := ui.NewPar(" Move or Del")
-    moveButton.Height = 3
-    moveButton.Width = 15
-    moveButton.BorderLabelFg = ui.ColorWhite
-    moveButton.X = ui.TermWidth() - 22
-    moveButton.Y = 13
-
     workspace := ui.NewPar("")
     workspace.Height = ui.TermHeight()
     workspace.BorderLabel = "Workspace"
@@ -194,17 +180,21 @@ func main() {
     controls.BorderLabelFg = ui.ColorWhite
 
     blocks := make([]Block, 0, 100)
-    colorButtons := make([]Button, 7, 7)
+    buttons := make([]Button, 9, 9)
 
-    colorButtons[0].Init(ui.TermWidth()-22, 18, 3, 15, ui.ColorRed, " Red ")
-    colorButtons[1].Init(ui.TermWidth()-22, 21, 3, 15, ui.ColorGreen, " Green ")
-    colorButtons[2].Init(ui.TermWidth()-22, 24, 3, 15, ui.ColorYellow, " Yellow ")
-    colorButtons[3].Init(ui.TermWidth()-22, 27, 3, 15, ui.ColorBlue, " Blue ")
-    colorButtons[4].Init(ui.TermWidth()-22, 30, 3, 15, ui.ColorMagenta, " Magenta ")
-    colorButtons[5].Init(ui.TermWidth()-22, 33, 3, 15, ui.ColorCyan, " Cyan ")
-    colorButtons[6].Init(ui.TermWidth()-22, 36, 3, 15, ui.ColorWhite|ui.AttrBold, " White ")
+    buttons[0].Init(ui.TermWidth()-22, 18, 3, 15, ui.ColorRed, " Red ")
+    buttons[1].Init(ui.TermWidth()-22, 21, 3, 15, ui.ColorGreen, " Green ")
+    buttons[2].Init(ui.TermWidth()-22, 24, 3, 15, ui.ColorYellow, " Yellow ")
+    buttons[3].Init(ui.TermWidth()-22, 27, 3, 15, ui.ColorBlue, " Blue ")
+    buttons[4].Init(ui.TermWidth()-22, 30, 3, 15, ui.ColorMagenta, " Magenta ")
+    buttons[5].Init(ui.TermWidth()-22, 33, 3, 15, ui.ColorCyan, " Cyan ")
+    buttons[6].Init(ui.TermWidth()-22, 36, 3, 15, ui.ColorWhite|ui.AttrBold, " White ")
 
-    colorButtons[0].Active = true
+    buttons[7].Init(ui.TermWidth()-22, 10, 3, 15, ui.ColorRed, " New Block ")
+    buttons[8].Init(ui.TermWidth()-22, 13, 3, 15, ui.ColorRed, " Move or Del ")
+
+    buttons[0].Active = true
+    buttons[7].Active = true
     newMode := true
     moveMode := false
 
@@ -219,8 +209,8 @@ func main() {
 
     ui.Body.Align()
 
-    ui.Render(ui.Body, newBlockButton, moveButton)
-    RenderButtons(colorButtons)
+    ui.Render(ui.Body)
+    RenderButtons(buttons)
 
     ui.Handle("<MouseLeft>", func(e ui.Event) {
         mouseX := e.Payload.(ui.Mouse).X
@@ -265,8 +255,8 @@ func main() {
         }
 
         ui.Clear()
-        ui.Render(ui.Body, newBlockButton, moveButton)
-        RenderButtons(colorButtons)
+        ui.Render(ui.Body)
+        RenderButtons(buttons)
         RenderBlocks(blocks)
 
     })
@@ -274,29 +264,14 @@ func main() {
     ui.Handle("t", func(ui.Event) {
         newMode = !newMode
         moveMode = !moveMode
-
-        if newMode {
-            newBlockButton.BorderFg = ui.ColorRed
-        } else {
-            newBlockButton.BorderFg = ui.ColorWhite
-        }
-
-        if moveMode {
-            moveButton.BorderFg = ui.ColorRed
-        } else {
-            moveButton.BorderFg = ui.ColorWhite
-        }
+        buttons[7].Toggle()
+        buttons[8].Toggle()
 
         if selectedBlock != nil {
             selectedBlock.Focused = false
             selectedBlock = nil
             selectedIndex = -1
         }
-
-        ui.Clear()
-        ui.Render(ui.Body, newBlockButton, moveButton)
-        RenderButtons(colorButtons)
-        RenderBlocks(blocks)
 
     })
 
@@ -306,12 +281,6 @@ func main() {
             selectedIndex = -1
             selectedBlock = nil
         }
-
-        ui.Clear()
-        ui.Render(ui.Body, newBlockButton, moveButton)
-        RenderButtons(colorButtons)
-        RenderBlocks(blocks)
-
     })
 
     ui.Handle("<Keyboard>", func(e ui.Event) {
@@ -319,19 +288,19 @@ func main() {
 
         if err == nil && i >= 1 && i <= 7 {
 
-            selectedColor = colorButtons[i-1].Color
-            ActivateButton(colorButtons, i-1)
+            selectedColor = buttons[i-1].Color
+            ActivateButton(buttons, i-1)
 
             if selectedBlock != nil {
-                selectedBlock.Color = colorButtons[i-1].Color
+                selectedBlock.Color = buttons[i-1].Color
             }
 
-            ui.Clear()
-            ui.Render(ui.Body, newBlockButton, moveButton)
-            RenderButtons(colorButtons)
-            RenderBlocks(blocks)
         }
 
+        ui.Clear()
+        ui.Render(ui.Body)
+        RenderButtons(buttons)
+        RenderBlocks(blocks)
     })
 
     ui.Handle("q", func(ui.Event) {
