@@ -31,7 +31,7 @@ func (b *Block) Render() {
     ui.Render(b.TermBlock)
 }
 
-func (b *Block) Dump() string {
+func (b *Block) Get() string {
     output := strconv.Itoa(b.TermBlock.Y) + " "
     output += strconv.Itoa(b.TermBlock.X) + " "
     output += strconv.Itoa(b.TermBlock.Width) + " "
@@ -69,18 +69,18 @@ func ValueInRange(value, min, max int) bool {
     return ((value >= min) && (value < max))
 }
 
-func renderBlocks(blocks []Block) {
+func RenderBlocks(blocks []Block) {
     for _, block := range blocks {
         block.Render()
     }
 }
 
-func dump(blocks []Block) {
+func DumpToFile(blocks []Block) {
     var blockAttrs string
 
     for _, block := range blocks {
 
-        blockAttrs += block.Dump()
+        blockAttrs += block.Get()
     }
 
     err := ioutil.WriteFile("level1.txt", []byte(blockAttrs), 0644)
@@ -126,13 +126,13 @@ func (b *Button) Init(x, y, height, width int, color ui.Attribute, colorName str
 
 //~ColorButton
 
-func renderButtons(blocks []Button) {
+func RenderButtons(blocks []Button) {
     for _, block := range blocks {
         block.Render()
     }
 }
 
-func activateButton(buttons []Button, index int) {
+func ActivateButton(buttons []Button, index int) {
     for i, _ := range buttons {
         if i == index {
             buttons[i].Active = true
@@ -220,7 +220,7 @@ func main() {
     ui.Body.Align()
 
     ui.Render(ui.Body, newBlockButton, moveButton)
-    renderButtons(colorButtons)
+    RenderButtons(colorButtons)
 
     ui.Handle("<MouseLeft>", func(e ui.Event) {
         mouseX := e.Payload.(ui.Mouse).X
@@ -266,8 +266,8 @@ func main() {
 
         ui.Clear()
         ui.Render(ui.Body, newBlockButton, moveButton)
-        renderButtons(colorButtons)
-        renderBlocks(blocks)
+        RenderButtons(colorButtons)
+        RenderBlocks(blocks)
 
     })
 
@@ -295,8 +295,8 @@ func main() {
 
         ui.Clear()
         ui.Render(ui.Body, newBlockButton, moveButton)
-        renderButtons(colorButtons)
-        renderBlocks(blocks)
+        RenderButtons(colorButtons)
+        RenderBlocks(blocks)
 
     })
 
@@ -309,113 +309,28 @@ func main() {
 
         ui.Clear()
         ui.Render(ui.Body, newBlockButton, moveButton)
-        renderButtons(colorButtons)
-        renderBlocks(blocks)
+        RenderButtons(colorButtons)
+        RenderBlocks(blocks)
 
     })
 
-    ui.Handle("1", func(ui.Event) {
-        selectedColor = ui.ColorRed
-        activateButton(colorButtons, 0)
+    ui.Handle("<Keyboard>", func(e ui.Event) {
+        i, err := strconv.Atoi(e.ID)
 
-        if selectedBlock != nil {
-            selectedBlock.Color = colorButtons[0].Color
+        if err == nil && i >= 1 && i <= 7 {
+
+            selectedColor = colorButtons[i-1].Color
+            ActivateButton(colorButtons, i-1)
+
+            if selectedBlock != nil {
+                selectedBlock.Color = colorButtons[i-1].Color
+            }
+
+            ui.Clear()
+            ui.Render(ui.Body, newBlockButton, moveButton)
+            RenderButtons(colorButtons)
+            RenderBlocks(blocks)
         }
-
-        ui.Clear()
-        ui.Render(ui.Body, newBlockButton, moveButton)
-        renderButtons(colorButtons)
-        renderBlocks(blocks)
-
-    })
-
-    ui.Handle("2", func(ui.Event) {
-        selectedColor = ui.ColorGreen
-        activateButton(colorButtons, 1)
-
-        if selectedBlock != nil {
-            selectedBlock.Color = colorButtons[1].Color
-        }
-
-        ui.Clear()
-        ui.Render(ui.Body, newBlockButton, moveButton)
-        renderButtons(colorButtons)
-        renderBlocks(blocks)
-
-    })
-
-    ui.Handle("3", func(ui.Event) {
-        selectedColor = colorButtons[2].Color
-        activateButton(colorButtons, 2)
-
-        if selectedBlock != nil {
-            selectedBlock.Color = colorButtons[2].Color
-        }
-
-        ui.Clear()
-        ui.Render(ui.Body, newBlockButton, moveButton)
-        renderButtons(colorButtons)
-        renderBlocks(blocks)
-
-    })
-
-    ui.Handle("4", func(ui.Event) {
-        selectedColor = colorButtons[3].Color
-        activateButton(colorButtons, 3)
-
-        if selectedBlock != nil {
-            selectedBlock.Color = colorButtons[3].Color
-        }
-
-        ui.Clear()
-        ui.Render(ui.Body, newBlockButton, moveButton)
-        renderButtons(colorButtons)
-        renderBlocks(blocks)
-
-    })
-
-    ui.Handle("5", func(ui.Event) {
-        selectedColor = colorButtons[4].Color
-        activateButton(colorButtons, 4)
-
-        if selectedBlock != nil {
-            selectedBlock.Color = colorButtons[4].Color
-        }
-
-        ui.Clear()
-        ui.Render(ui.Body, newBlockButton, moveButton)
-        renderButtons(colorButtons)
-        renderBlocks(blocks)
-
-    })
-
-    ui.Handle("6", func(ui.Event) {
-        selectedColor = colorButtons[5].Color
-        activateButton(colorButtons, 5)
-
-        if selectedBlock != nil {
-            selectedBlock.Color = colorButtons[5].Color
-        }
-
-        ui.Clear()
-        ui.Render(ui.Body, newBlockButton, moveButton)
-        renderButtons(colorButtons)
-        renderBlocks(blocks)
-
-    })
-
-    ui.Handle("7", func(ui.Event) {
-        selectedColor = colorButtons[6].Color
-        activateButton(colorButtons, 6)
-
-        if selectedBlock != nil {
-            selectedBlock.Color = colorButtons[6].Color
-        }
-
-        ui.Clear()
-        ui.Render(ui.Body, newBlockButton, moveButton)
-        renderButtons(colorButtons)
-        renderBlocks(blocks)
 
     })
 
@@ -424,7 +339,7 @@ func main() {
     })
 
     ui.Handle("<Enter>", func(ui.Event) {
-        dump(blocks)
+        DumpToFile(blocks)
     })
 
     ui.Loop()
